@@ -1,3 +1,14 @@
+## GCS Integration
+
+This is google cloud storage integration using Client with ADC or with Credential file .json key form Google Cloud. Using golang gin Gonic and postgres setup documentation using GO.
+
+Help me to improve this code more flexible and esy to use
+
+API 
+- api/v1/upload
+- api/v1/download
+next .... 
+
 ## Feature golang
 
 - Gin Gonic Framework 
