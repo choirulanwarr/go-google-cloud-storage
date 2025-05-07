@@ -5,9 +5,11 @@ This is google cloud storage integration using Client with ADC or with Credentia
 Help me to improve this code more flexible and esy to use
 
 API 
-- api/v1/upload
-- api/v1/download
-next .... 
+- POST api/v1/upload
+- GET api/v1/download?path=
+- GET api/v1/list
+- POST api/v1/create/bucket
+- DELETE api/v1/delete
 
 ## Feature golang
 
