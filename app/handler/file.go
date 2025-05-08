@@ -6,7 +6,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go-google-cloud-storage/app/constant"
 	"go-google-cloud-storage/app/helper"
-	"go-google-cloud-storage/app/integration"
 	"go-google-cloud-storage/app/resource/request"
 	"go-google-cloud-storage/app/service"
 	"io"
@@ -58,7 +57,7 @@ func (f *FileHandler) UploadFile(ctx *gin.Context) {
 	}
 	defer uploadedFile.Close()
 
-	if !integration.IsAllowedFileType(apiCallID, uploadedFile) {
+	if !helper.IsAllowedFileType(apiCallID, uploadedFile) {
 		helper.LogError(apiCallID, "Rejected file: unsupported content type")
 		helper.ResponseAPI(ctx, constant.Res400InvalidPayload)
 		return
@@ -106,7 +105,7 @@ func (f *FileHandler) DownloadFile(ctx *gin.Context) {
 	fileName := filepath.Base(filePath)
 
 	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName))
-	ctx.Header("Content-Type", integration.DefaultMIME(contentType))
+	ctx.Header("Content-Type", helper.DefaultMIME(contentType))
 
 	helper.LogInfo(apiCallID, "Serving file: "+fileName+" with Content-Type: "+contentType)
 
@@ -123,10 +122,16 @@ func (f *FileHandler) DownloadFile(ctx *gin.Context) {
 	}
 }
 
-func (f *FileHandler) GetFile(ctx *gin.Context) {
+func (f *FileHandler) GetAllFile(ctx *gin.Context) {
+	apiCallID := ctx.GetString(constant.RequestIDKey)
+	result, response := f.Service.GetAllFile(apiCallID)
+	helper.ResponseAPI(ctx, response, result)
+}
+
+func (f *FileHandler) GetSpecificFile(ctx *gin.Context) {
 	apiCallID := ctx.GetString(constant.RequestIDKey)
 	folder := ctx.Param("folder")
 
-	result, response := f.Service.GetFile(apiCallID, folder)
+	result, response := f.Service.GetSpecificFile(apiCallID, folder)
 	helper.ResponseAPI(ctx, response, result)
 }
