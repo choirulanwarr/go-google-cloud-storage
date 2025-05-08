@@ -7,10 +7,11 @@ Help me to improve this code more flexible and esy to use
 API 
 - `POST` api/v1/upload
 - `GET` api/v1/download?path=
+- `GET` api/v1/list
+- `GET` api/v1/list/:folderName
 
 **NEXT update ...**
 
-- `GET` api/v1/list
 - `POST` api/v1/create/bucket
 - `DELETE` api/v1/delete
 
