@@ -21,7 +21,8 @@ var (
 )
 
 var (
-	Res400InvalidPayload = ResponseMap{Code: http.StatusBadRequest, Status: ResponseStatusFailed, Message: "Invalid payload data"}
+	Res400InvalidPayload     = ResponseMap{Code: http.StatusBadRequest, Status: ResponseStatusFailed, Message: "Invalid payload data"}
+	Res400FailedDataNotFound = ResponseMap{Code: http.StatusBadRequest, Status: ResponseStatusFailed, Message: "Data not found"}
 )
 
 var (

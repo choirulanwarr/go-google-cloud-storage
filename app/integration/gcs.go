@@ -3,7 +3,9 @@ package integration
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"google.golang.org/api/iterator"
 	"io"
 	"math/rand"
 	"mime/multipart"
@@ -54,6 +56,23 @@ func generateUniqueFilename() string {
 	timestamp := fmt.Sprintf("%d%02d%02d%02d", now.Unix(), now.Hour(), now.Minute(), now.Second())
 	randomSuffix := rand.Intn(10_000_000) + 1
 	return fmt.Sprintf("%s%d", timestamp, randomSuffix)
+}
+
+func (g *GCS) GeneratePublicURL(filename string) string {
+	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", g.BucketName, filename)
+}
+
+func (g *GCS) FormatFileSize(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 func (g *GCS) initClient(ctx context.Context, apiCallID string, useLocalCredential bool) (*storage.Client, error) {
@@ -119,4 +138,40 @@ func (g *GCS) Download(apiCallID, objectPath string, useLocalCredential bool) (*
 	helper.LogInfo(apiCallID, "Download file successfully: "+objectPath)
 
 	return nr, attr.ContentType, nil
+}
+
+func (g *GCS) List(apiCallID, folder string, useLocalCredential bool) (*[]storage.ObjectAttrs, error) {
+	ctx := context.Background()
+	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
+	if err != nil {
+		return nil, fmt.Errorf("storage.NewClient: %w", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*100)
+	defer cancel()
+
+	var results []storage.ObjectAttrs
+	query := &storage.Query{}
+	if folder != "" {
+		query.Prefix = folder
+	}
+
+	it := client.Bucket(g.BucketName).Objects(ctx, query)
+	for {
+		attrs, err := it.Next()
+		if errors.Is(err, iterator.Done) {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("Bucket(%q).Objects: %w", g.BucketName, err)
+		}
+		results = append(results, *attrs)
+	}
+
+	if len(results) == 0 {
+		return nil, storage.ErrObjectNotExist
+	}
+
+	return &results, nil
 }
