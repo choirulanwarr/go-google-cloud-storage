@@ -121,5 +121,12 @@ func (f *FileHandler) DownloadFile(ctx *gin.Context) {
 		helper.ResponseAPI(ctx, constant.Res422SomethingWentWrong)
 		return
 	}
+}
 
+func (f *FileHandler) GetFile(ctx *gin.Context) {
+	apiCallID := ctx.GetString(constant.RequestIDKey)
+	folder := ctx.Param("folder")
+
+	result, response := f.Service.GetFile(apiCallID, folder)
+	helper.ResponseAPI(ctx, response, result)
 }
