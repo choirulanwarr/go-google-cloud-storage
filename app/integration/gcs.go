@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"google.golang.org/api/iterator"
 	"io"
-	"math/rand"
-	"mime/multipart"
-	"net/http"
 	"path/filepath"
 	"time"
 
@@ -23,58 +20,6 @@ type GCS struct {
 	CredentialFilePath string
 }
 
-var allowedMIMETypes = map[string]bool{
-	"image/jpeg":               true,
-	"image/png":                true,
-	"image/jpg":                true,
-	"application/pdf":          true,
-	"application/zip":          true,
-	"application/octet-stream": true,
-}
-
-func IsAllowedFileType(apiCallID string, file multipart.File) bool {
-	buffer := make([]byte, 512)
-	if _, err := file.Read(buffer); err != nil {
-		return false
-	}
-	_, _ = file.Seek(0, io.SeekStart)
-
-	mimeType := http.DetectContentType(buffer)
-	helper.LogInfo(apiCallID, "Content-Type: "+mimeType)
-	return allowedMIMETypes[mimeType]
-}
-
-func DefaultMIME(mime string) string {
-	if mime == "" {
-		return "application/octet-stream"
-	}
-	return mime
-}
-
-func generateUniqueFilename() string {
-	now := time.Now()
-	timestamp := fmt.Sprintf("%d%02d%02d%02d", now.Unix(), now.Hour(), now.Minute(), now.Second())
-	randomSuffix := rand.Intn(10_000_000) + 1
-	return fmt.Sprintf("%s%d", timestamp, randomSuffix)
-}
-
-func (g *GCS) GeneratePublicURL(filename string) string {
-	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", g.BucketName, filename)
-}
-
-func (g *GCS) FormatFileSize(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
-}
-
 func (g *GCS) initClient(ctx context.Context, apiCallID string, useLocalCredential bool) (*storage.Client, error) {
 	var opts []option.ClientOption
 	if useLocalCredential {
@@ -85,7 +30,7 @@ func (g *GCS) initClient(ctx context.Context, apiCallID string, useLocalCredenti
 }
 
 func (g *GCS) Upload(apiCallID, folder, filename string, fileData []byte, useLocalCredential bool) (string, error) {
-	path := filepath.Join(folder, generateUniqueFilename()+filepath.Ext(filename))
+	path := filepath.Join(folder, helper.GenerateUniqueFilename()+filepath.Ext(filename))
 	helper.LogInfo(apiCallID, "Uploading file: "+path)
 
 	ctx := context.Background()
@@ -140,7 +85,7 @@ func (g *GCS) Download(apiCallID, objectPath string, useLocalCredential bool) (*
 	return nr, attr.ContentType, nil
 }
 
-func (g *GCS) List(apiCallID, folder string, useLocalCredential bool) (*[]storage.ObjectAttrs, error) {
+func (g *GCS) List(apiCallID string, folder string, useLocalCredential bool) (*[]storage.ObjectAttrs, error) {
 	ctx := context.Background()
 	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
 	if err != nil {

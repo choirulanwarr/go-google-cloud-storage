@@ -8,8 +8,6 @@ import (
 	"go-google-cloud-storage/app/helper"
 	"go-google-cloud-storage/app/integration"
 	"go-google-cloud-storage/app/resource/response"
-	"path/filepath"
-	"time"
 )
 
 type FileService struct {
@@ -52,7 +50,27 @@ func (f *FileService) DownloadFile(apiCallID, filePath string) (*storage.Reader,
 	return downloadedFile, contentType, constant.Res200Get
 }
 
-func (f *FileService) GetFile(apiCallID, folder string) (*[]response.GetFileResponse, constant.ResponseMap) {
+func (f *FileService) GetAllFile(apiCallID string) (*[]response.GetFileResponse, constant.ResponseMap) {
+	gcs := integration.GCS{
+		BucketName:         f.Viper.GetString("GCS_BUCKET_NAME"),
+		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	}
+
+	listFile, err := gcs.List(apiCallID, "", f.Viper.GetBool("GCS_CONFIG_SA"))
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			return nil, constant.Res400FailedDataNotFound
+		}
+		helper.LogError(apiCallID, "Error list file : "+err.Error())
+		return nil, constant.Res422SomethingWentWrong
+	}
+
+	formatted := response.GetFileResponseFormatter(listFile)
+
+	return &formatted, constant.Res200Get
+}
+
+func (f *FileService) GetSpecificFile(apiCallID, folder string) (*[]response.GetFileResponse, constant.ResponseMap) {
 	gcs := integration.GCS{
 		BucketName:         f.Viper.GetString("GCS_BUCKET_NAME"),
 		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
@@ -67,18 +85,7 @@ func (f *FileService) GetFile(apiCallID, folder string) (*[]response.GetFileResp
 		return nil, constant.Res422SomethingWentWrong
 	}
 
-	var result []response.GetFileResponse
+	formatted := response.GetFileResponseFormatter(listFile)
 
-	for _, file := range *listFile {
-		result = append(result, response.GetFileResponse{
-			Name:      filepath.Base(file.Name),
-			URL:       gcs.GeneratePublicURL(file.Name),
-			Size:      gcs.FormatFileSize(file.Size),
-			Type:      file.ContentType,
-			CreatedAt: file.Created.Format(time.RFC3339),
-			UpdatedAt: file.Updated.Format(time.RFC3339),
-		})
-	}
-
-	return &result, constant.Res200Get
+	return &formatted, constant.Res200Get
 }
