@@ -9,10 +9,10 @@ API
 - `GET` api/v1/download?path=
 - `GET` api/v1/list
 - `GET` api/v1/list/:folderName
+- `POST` api/v1/create/bucket
 
 **NEXT update ...**
 
-- `POST` api/v1/create/bucket
 - `DELETE` api/v1/delete
 
 ## Feature golang
