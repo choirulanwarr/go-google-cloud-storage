@@ -14,3 +14,7 @@ type DownloadFileRequest struct {
 type CreateBucketRequest struct {
 	BucketName string `validate:"required,not_only_space"`
 }
+
+type DeleteFileRequest struct {
+	Path string `validate:"required,not_only_space"`
+}

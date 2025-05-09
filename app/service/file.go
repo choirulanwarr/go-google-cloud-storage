@@ -105,3 +105,18 @@ func (f *FileService) CreateBucket(apiCallID, bucketName string) constant.Respon
 
 	return constant.Res200Save
 }
+
+func (f *FileService) DeleteFile(apiCallID, path string) constant.ResponseMap {
+	gcs := integration.GCS{
+		BucketName:         f.Viper.GetString("GCS_BUCKET_NAME"),
+		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	}
+
+	err := gcs.DeleteFile(apiCallID, path, f.Viper.GetBool("GCS_CONFIG_SA"))
+	if err != nil {
+		helper.LogError(apiCallID, "Error delete file : "+err.Error())
+		return constant.Res422SomethingWentWrong
+	}
+
+	return constant.Res200Delete
+}
