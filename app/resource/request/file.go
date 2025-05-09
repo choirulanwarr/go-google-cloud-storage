@@ -10,3 +10,7 @@ type UploadFileRequest struct {
 type DownloadFileRequest struct {
 	Path string `validate:"required,not_only_space"`
 }
+
+type CreateBucketRequest struct {
+	BucketName string `validate:"required,not_only_space"`
+}
