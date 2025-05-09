@@ -32,7 +32,7 @@ go get -u gorm.io/driver/postgres
 ```
 - Google Cloud Storage
 ```
-go get -u 
+go get -u cloud.google.com/go/storage
 ```
 - Viper
 ```
