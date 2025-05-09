@@ -135,3 +135,24 @@ func (f *FileHandler) GetSpecificFile(ctx *gin.Context) {
 	result, response := f.Service.GetSpecificFile(apiCallID, folder)
 	helper.ResponseAPI(ctx, response, result)
 }
+
+func (f *FileHandler) CreateBucket(ctx *gin.Context) {
+	apiCallID := ctx.GetString(constant.RequestIDKey)
+
+	var req request.CreateBucketRequest
+	if err := ctx.ShouldBind(&req); err != nil {
+		helper.LogError(apiCallID, "Failed to bind request: "+err.Error())
+		helper.ResponseAPI(ctx, constant.Res400InvalidPayload)
+		return
+	}
+
+	if err := f.Validator.Struct(req); err != nil {
+		helper.LogError(apiCallID, "Payload validation failed: "+err.Error())
+		formattedErrors := helper.ErrorValidationFormatter(err.(validator.ValidationErrors))
+		helper.ResponseAPI(ctx, constant.Res400InvalidPayload, formattedErrors)
+		return
+	}
+
+	response := f.Service.CreateBucket(apiCallID, req.BucketName)
+	helper.ResponseAPI(ctx, response)
+}

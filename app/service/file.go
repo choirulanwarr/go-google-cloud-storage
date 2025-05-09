@@ -89,3 +89,19 @@ func (f *FileService) GetSpecificFile(apiCallID, folder string) (*[]response.Get
 
 	return &formatted, constant.Res200Get
 }
+
+func (f *FileService) CreateBucket(apiCallID, bucketName string) constant.ResponseMap {
+	gcs := integration.GCS{
+		StorageClassBucket: "COLDLINE",
+		LocationBucket:     "asia",
+		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	}
+
+	err := gcs.CreateBucket(apiCallID, bucketName, f.Viper.GetBool("GCS_CONFIG_SA"))
+	if err != nil {
+		helper.LogError(apiCallID, "Error create bucket : "+err.Error())
+		return constant.Res422SomethingWentWrong
+	}
+
+	return constant.Res200Save
+}

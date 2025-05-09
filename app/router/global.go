@@ -5,6 +5,7 @@ func initGlobalRoutes(config *Config) {
 
 	// File
 	globalApiFile := globalApi.Group("/")
+	globalApiFile.POST("/bucket/create", config.FileHandler.CreateBucket)
 	globalApiFile.POST("/upload", config.FileHandler.UploadFile)
 	globalApiFile.GET("/download", config.FileHandler.DownloadFile)
 	globalApiFile.GET("/list", config.FileHandler.GetAllFile)

@@ -16,7 +16,10 @@ import (
 )
 
 type GCS struct {
+	ProjectID          string
 	BucketName         string
+	StorageClassBucket string
+	LocationBucket     string
 	CredentialFilePath string
 }
 
@@ -119,4 +122,26 @@ func (g *GCS) List(apiCallID string, folder string, useLocalCredential bool) (*[
 	}
 
 	return &results, nil
+}
+
+func (g *GCS) CreateBucket(apiCallID, bucketName string, useLocalCredential bool) error {
+	ctx := context.Background()
+	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %w", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	storageClassAndLocation := &storage.BucketAttrs{
+		StorageClass: g.StorageClassBucket,
+		Location:     g.LocationBucket,
+	}
+	bucket := client.Bucket(bucketName)
+	if err := bucket.Create(ctx, g.ProjectID, storageClassAndLocation); err != nil {
+		return fmt.Errorf("Bucket(%q).Create: %w", bucketName, err)
+	}
+	return nil
 }
