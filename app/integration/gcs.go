@@ -145,3 +145,28 @@ func (g *GCS) CreateBucket(apiCallID, bucketName string, useLocalCredential bool
 	}
 	return nil
 }
+
+func (g *GCS) DeleteFile(apiCallID, path string, useLocalCredential bool) error {
+	ctx := context.Background()
+	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
+	if err != nil {
+		return fmt.Errorf("storage.NewClient: %w", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	o := client.Bucket(g.BucketName).Object(path)
+
+	attrs, err := o.Attrs(ctx)
+	if err != nil {
+		return fmt.Errorf("object.Attrs: %w", err)
+	}
+	o = o.If(storage.Conditions{GenerationMatch: attrs.Generation})
+
+	if err := o.Delete(ctx); err != nil {
+		return fmt.Errorf("Object(%q).Delete: %w", path, err)
+	}
+	return nil
+}

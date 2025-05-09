@@ -16,8 +16,9 @@ const (
 )
 
 var (
-	Res200Save = ResponseMap{Code: http.StatusOK, Status: ResponseStatusSuccess, Message: "Success save data"}
-	Res200Get  = ResponseMap{Code: http.StatusOK, Status: ResponseStatusSuccess, Message: "Success get data"}
+	Res200Save   = ResponseMap{Code: http.StatusOK, Status: ResponseStatusSuccess, Message: "Success save data"}
+	Res200Get    = ResponseMap{Code: http.StatusOK, Status: ResponseStatusSuccess, Message: "Success get data"}
+	Res200Delete = ResponseMap{Code: http.StatusOK, Status: ResponseStatusSuccess, Message: "Success delete data"}
 )
 
 var (

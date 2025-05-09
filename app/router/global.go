@@ -10,4 +10,5 @@ func initGlobalRoutes(config *Config) {
 	globalApiFile.GET("/download", config.FileHandler.DownloadFile)
 	globalApiFile.GET("/list", config.FileHandler.GetAllFile)
 	globalApiFile.GET("/list/:folder", config.FileHandler.GetSpecificFile)
+	globalApiFile.DELETE("/delete", config.FileHandler.DeleteFile)
 }
