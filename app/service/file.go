@@ -21,11 +21,12 @@ func NewFileService(viper *viper.Viper) *FileService {
 }
 
 func (f *FileService) UploadFile(apiCallID, folder, filename string, file []byte) (*response.UploadFileResponse, constant.ResponseMap) {
-	gcs := integration.GCS{
-		BucketName:         f.Viper.GetString("GCS_BUCKET_NAME"),
-		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	gcs, err := integration.GCSInstance(f.Viper)
+	if err != nil {
+		helper.LogError(apiCallID, "Error creating GCS configuration: "+err.Error())
+		return nil, constant.Res422SomethingWentWrong
 	}
-	uploadedPath, err := gcs.Upload(apiCallID, folder, filename, file, f.Viper.GetBool("GCS_CONFIG_SA"))
+	uploadedPath, err := gcs.Upload(apiCallID, folder, filename, file)
 	if err != nil {
 		helper.LogError(apiCallID, "Error upload file : "+err.Error())
 		return nil, constant.Res422SomethingWentWrong
@@ -36,12 +37,12 @@ func (f *FileService) UploadFile(apiCallID, folder, filename string, file []byte
 }
 
 func (f *FileService) DownloadFile(apiCallID, filePath string) (*storage.Reader, string, constant.ResponseMap) {
-	gcs := integration.GCS{
-		BucketName:         f.Viper.GetString("GCS_BUCKET_NAME"),
-		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	gcs, err := integration.GCSInstance(f.Viper)
+	if err != nil {
+		helper.LogError(apiCallID, "Error creating GCS configuration: "+err.Error())
+		return nil, "", constant.Res422SomethingWentWrong
 	}
-
-	downloadedFile, contentType, err := gcs.Download(apiCallID, filePath, f.Viper.GetBool("GCS_CONFIG_SA"))
+	downloadedFile, contentType, err := gcs.Download(apiCallID, filePath)
 	if err != nil {
 		helper.LogError(apiCallID, "Error download file : "+err.Error())
 		return nil, "", constant.Res422SomethingWentWrong
@@ -51,12 +52,12 @@ func (f *FileService) DownloadFile(apiCallID, filePath string) (*storage.Reader,
 }
 
 func (f *FileService) GetAllFile(apiCallID string) (*[]response.GetFileResponse, constant.ResponseMap) {
-	gcs := integration.GCS{
-		BucketName:         f.Viper.GetString("GCS_BUCKET_NAME"),
-		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	gcs, err := integration.GCSInstance(f.Viper)
+	if err != nil {
+		helper.LogError(apiCallID, "Error creating GCS configuration: "+err.Error())
+		return nil, constant.Res422SomethingWentWrong
 	}
-
-	listFile, err := gcs.List(apiCallID, "", f.Viper.GetBool("GCS_CONFIG_SA"))
+	listFile, err := gcs.List(apiCallID, "")
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
 			return nil, constant.Res400FailedDataNotFound
@@ -71,12 +72,12 @@ func (f *FileService) GetAllFile(apiCallID string) (*[]response.GetFileResponse,
 }
 
 func (f *FileService) GetSpecificFile(apiCallID, folder string) (*[]response.GetFileResponse, constant.ResponseMap) {
-	gcs := integration.GCS{
-		BucketName:         f.Viper.GetString("GCS_BUCKET_NAME"),
-		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	gcs, err := integration.GCSInstance(f.Viper)
+	if err != nil {
+		helper.LogError(apiCallID, "Error creating GCS configuration: "+err.Error())
+		return nil, constant.Res422SomethingWentWrong
 	}
-
-	listFile, err := gcs.List(apiCallID, folder, f.Viper.GetBool("GCS_CONFIG_SA"))
+	listFile, err := gcs.List(apiCallID, folder)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
 			return nil, constant.Res400FailedDataNotFound
@@ -91,13 +92,12 @@ func (f *FileService) GetSpecificFile(apiCallID, folder string) (*[]response.Get
 }
 
 func (f *FileService) CreateBucket(apiCallID, bucketName string) constant.ResponseMap {
-	gcs := integration.GCS{
-		StorageClassBucket: "COLDLINE",
-		LocationBucket:     "asia",
-		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	gcs, err := integration.GCSInstance(f.Viper)
+	if err != nil {
+		helper.LogError(apiCallID, "Error creating GCS configuration: "+err.Error())
+		return constant.Res422SomethingWentWrong
 	}
-
-	err := gcs.CreateBucket(apiCallID, bucketName, f.Viper.GetBool("GCS_CONFIG_SA"))
+	err = gcs.CreateBucket(apiCallID, bucketName)
 	if err != nil {
 		helper.LogError(apiCallID, "Error create bucket : "+err.Error())
 		return constant.Res422SomethingWentWrong
@@ -107,12 +107,12 @@ func (f *FileService) CreateBucket(apiCallID, bucketName string) constant.Respon
 }
 
 func (f *FileService) DeleteFile(apiCallID, path string) constant.ResponseMap {
-	gcs := integration.GCS{
-		BucketName:         f.Viper.GetString("GCS_BUCKET_NAME"),
-		CredentialFilePath: f.Viper.GetString("GCS_CREDENTIAL_FILE_PATH"),
+	gcs, err := integration.GCSInstance(f.Viper)
+	if err != nil {
+		helper.LogError(apiCallID, "Error creating GCS configuration: "+err.Error())
+		return constant.Res422SomethingWentWrong
 	}
-
-	err := gcs.DeleteFile(apiCallID, path, f.Viper.GetBool("GCS_CONFIG_SA"))
+	err = gcs.DeleteFile(apiCallID, path)
 	if err != nil {
 		helper.LogError(apiCallID, "Error delete file : "+err.Error())
 		return constant.Res422SomethingWentWrong
