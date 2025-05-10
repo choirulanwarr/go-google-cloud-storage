@@ -22,6 +22,10 @@ API
 ```
 go get -u github.com/gin-gonic/gin
 ```
+- Gin Contrib Cors 
+```
+go get -u github.com/gin-contrib/cors
+```
 - Gorm
 ```
 go get -u gorm.io/gorm
@@ -41,14 +45,6 @@ go get -u github.com/spf13/viper
 - Validator Go v10
 ```
 go get -u github.com/go-playground/validator/v10
-```
-- Golang JWT v5
-```
-go get -u github.com/golang-jwt/jwt/v5
-```
-- Google UUID
-```
-go get -u github.com/google/uuid
 ```
 - Logrus
 ```
