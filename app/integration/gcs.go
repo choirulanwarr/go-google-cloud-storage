@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"google.golang.org/api/iterator"
 	"io"
 	"path/filepath"
@@ -21,6 +22,39 @@ type GCS struct {
 	StorageClassBucket string
 	LocationBucket     string
 	CredentialFilePath string
+	ConfigSA           bool
+}
+
+type gcsConfigChecklist struct {
+	Key   string
+	Valid bool
+}
+
+func GCSInstance(v *viper.Viper) (*GCS, error) {
+	gcs := &GCS{
+		ProjectID:          v.GetString("GCS_PROJECT_ID"),
+		BucketName:         v.GetString("GCS_BUCKET_NAME"),
+		CredentialFilePath: v.GetString("GCS_CREDENTIAL_FILE_PATH"),
+		StorageClassBucket: v.GetString("GCS_STORAGE_CLASS_BUCKET"),
+		LocationBucket:     v.GetString("GCS_STORAGE_LOCATION_BUCKET"),
+		ConfigSA:           v.GetBool("GCS_CONFIG_SA"),
+	}
+
+	checks := []gcsConfigChecklist{
+		{"GCS_PROJECT_ID", gcs.ProjectID != ""},
+		{"GCS_BUCKET_NAME", gcs.BucketName != ""},
+		{"GCS_CREDENTIAL_FILE_PATH", gcs.CredentialFilePath != ""},
+		{"GCS_STORAGE_CLASS_BUCKET", gcs.StorageClassBucket != ""},
+		{"GCS_STORAGE_LOCATION_BUCKET", gcs.LocationBucket != ""},
+	}
+
+	for _, check := range checks {
+		if !check.Valid {
+			return nil, fmt.Errorf("missing or invalid required GCS configuration: %s", check.Key)
+		}
+	}
+
+	return gcs, nil
 }
 
 func (g *GCS) initClient(ctx context.Context, apiCallID string, useLocalCredential bool) (*storage.Client, error) {
@@ -32,12 +66,12 @@ func (g *GCS) initClient(ctx context.Context, apiCallID string, useLocalCredenti
 	return storage.NewClient(ctx, opts...)
 }
 
-func (g *GCS) Upload(apiCallID, folder, filename string, fileData []byte, useLocalCredential bool) (string, error) {
+func (g *GCS) Upload(apiCallID, folder, filename string, fileData []byte) (string, error) {
 	path := filepath.Join(folder, helper.GenerateUniqueFilename()+filepath.Ext(filename))
 	helper.LogInfo(apiCallID, "Uploading file: "+path)
 
 	ctx := context.Background()
-	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
+	client, err := g.initClient(ctx, apiCallID, g.ConfigSA)
 	if err != nil {
 		return "", fmt.Errorf("storage.NewClient: %w", err)
 	}
@@ -61,9 +95,9 @@ func (g *GCS) Upload(apiCallID, folder, filename string, fileData []byte, useLoc
 	return path, nil
 }
 
-func (g *GCS) Download(apiCallID, objectPath string, useLocalCredential bool) (*storage.Reader, string, error) {
+func (g *GCS) Download(apiCallID, objectPath string) (*storage.Reader, string, error) {
 	ctx := context.Background()
-	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
+	client, err := g.initClient(ctx, apiCallID, g.ConfigSA)
 	if err != nil {
 		return nil, "", fmt.Errorf("storage.NewClient: %w", err)
 	}
@@ -88,9 +122,9 @@ func (g *GCS) Download(apiCallID, objectPath string, useLocalCredential bool) (*
 	return nr, attr.ContentType, nil
 }
 
-func (g *GCS) List(apiCallID string, folder string, useLocalCredential bool) (*[]storage.ObjectAttrs, error) {
+func (g *GCS) List(apiCallID string, folder string) (*[]storage.ObjectAttrs, error) {
 	ctx := context.Background()
-	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
+	client, err := g.initClient(ctx, apiCallID, g.ConfigSA)
 	if err != nil {
 		return nil, fmt.Errorf("storage.NewClient: %w", err)
 	}
@@ -124,9 +158,9 @@ func (g *GCS) List(apiCallID string, folder string, useLocalCredential bool) (*[
 	return &results, nil
 }
 
-func (g *GCS) CreateBucket(apiCallID, bucketName string, useLocalCredential bool) error {
+func (g *GCS) CreateBucket(apiCallID, bucketName string) error {
 	ctx := context.Background()
-	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
+	client, err := g.initClient(ctx, apiCallID, g.ConfigSA)
 	if err != nil {
 		return fmt.Errorf("storage.NewClient: %w", err)
 	}
@@ -146,9 +180,9 @@ func (g *GCS) CreateBucket(apiCallID, bucketName string, useLocalCredential bool
 	return nil
 }
 
-func (g *GCS) DeleteFile(apiCallID, path string, useLocalCredential bool) error {
+func (g *GCS) DeleteFile(apiCallID, path string) error {
 	ctx := context.Background()
-	client, err := g.initClient(ctx, apiCallID, useLocalCredential)
+	client, err := g.initClient(ctx, apiCallID, g.ConfigSA)
 	if err != nil {
 		return fmt.Errorf("storage.NewClient: %w", err)
 	}
