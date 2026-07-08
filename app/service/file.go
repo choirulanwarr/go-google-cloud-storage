@@ -8,6 +8,7 @@ import (
 	"go-google-cloud-storage/app/helper"
 	"go-google-cloud-storage/app/integration"
 	"go-google-cloud-storage/app/resource/response"
+	"time"
 )
 
 type FileService struct {
@@ -104,6 +105,34 @@ func (f *FileService) CreateBucket(apiCallID, bucketName string) constant.Respon
 	}
 
 	return constant.Res200Save
+}
+
+func (f *FileService) GeneratePresignedURL(apiCallID, filePath string, expiresInMinutes int) (*response.PresignedURLResponse, constant.ResponseMap) {
+	gcs, err := integration.GCSInstance(f.Viper)
+	if err != nil {
+		helper.LogError(apiCallID, "Error creating GCS configuration: "+err.Error())
+		return nil, constant.Res422SomethingWentWrong
+	}
+
+	// Default expiration to 15 minutes if not specified or invalid
+	if expiresInMinutes <= 0 {
+		expiresInMinutes = 15
+	}
+
+	expiration := time.Duration(expiresInMinutes) * time.Minute
+	expiresAt := time.Now().UTC().Add(expiration)
+
+	url, err := gcs.GeneratePresignedURL(apiCallID, filePath, expiration)
+	if err != nil {
+		helper.LogError(apiCallID, "Error generating presigned URL: "+err.Error())
+		return nil, constant.Res422SomethingWentWrong
+	}
+
+	return &response.PresignedURLResponse{
+		URL:       url,
+		Path:      filePath,
+		ExpiresAt: expiresAt.Format(time.RFC3339),
+	}, constant.Res200Get
 }
 
 func (f *FileService) DeleteFile(apiCallID, path string) constant.ResponseMap {

@@ -3,11 +3,13 @@ package integration
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/spf13/viper"
 	"google.golang.org/api/iterator"
 	"io"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -178,6 +180,71 @@ func (g *GCS) CreateBucket(apiCallID, bucketName string) error {
 		return fmt.Errorf("Bucket(%q).Create: %w", bucketName, err)
 	}
 	return nil
+}
+
+// serviceAccountKey represents the minimal fields needed from a GCP service account JSON key file.
+type serviceAccountKey struct {
+	ClientEmail string `json:"client_email"`
+	PrivateKey  string `json:"private_key"`
+}
+
+// loadServiceAccountKey reads and parses a GCP service account JSON key file,
+// returning the client_email and private_key needed for URL signing.
+func loadServiceAccountKey(filePath string) (*serviceAccountKey, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read service account key file: %w", err)
+	}
+
+	var key serviceAccountKey
+	if err := json.Unmarshal(data, &key); err != nil {
+		return nil, fmt.Errorf("failed to parse service account key JSON: %w", err)
+	}
+
+	if key.ClientEmail == "" || key.PrivateKey == "" {
+		return nil, fmt.Errorf("service account key file missing client_email or private_key")
+	}
+
+	return &key, nil
+}
+
+// GeneratePresignedURL generates a presigned (temporary) URL for downloading an object
+// from GCS without requiring the caller to have GCP credentials.
+// The URL is valid for the specified expiration duration.
+func (g *GCS) GeneratePresignedURL(apiCallID, objectPath string, expiration time.Duration) (string, error) {
+	helper.LogInfo(apiCallID, "Generating presigned URL for: "+objectPath)
+
+	ctx := context.Background()
+	client, err := g.initClient(ctx, apiCallID, g.ConfigSA)
+	if err != nil {
+		return "", fmt.Errorf("storage.NewClient: %w", err)
+	}
+	defer client.Close()
+
+	opts := &storage.SignedURLOptions{
+		Scheme:  storage.SigningSchemeV4,
+		Method:  "GET",
+		Expires: time.Now().Add(expiration),
+	}
+
+	// When using a local service account key file, provide explicit signing credentials.
+	// Otherwise, rely on the client's automatic credential detection (ADC with SignBytes support).
+	if g.ConfigSA {
+		saKey, err := loadServiceAccountKey(g.CredentialFilePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to load service account key for signing: %w", err)
+		}
+		opts.GoogleAccessID = saKey.ClientEmail
+		opts.PrivateKey = []byte(saKey.PrivateKey)
+	}
+
+	url, err := client.Bucket(g.BucketName).SignedURL(objectPath, opts)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate signed URL: %w", err)
+	}
+
+	helper.LogInfo(apiCallID, "Presigned URL generated successfully for: "+objectPath)
+	return url, nil
 }
 
 func (g *GCS) DeleteFile(apiCallID, path string) error {

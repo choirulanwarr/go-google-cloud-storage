@@ -157,6 +157,27 @@ func (f *FileHandler) CreateBucket(ctx *gin.Context) {
 	helper.ResponseAPI(ctx, response)
 }
 
+func (f *FileHandler) PresignedURL(ctx *gin.Context) {
+	apiCallID := ctx.GetString(constant.RequestIDKey)
+
+	var req request.PresignedURLRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		helper.LogError(apiCallID, "Failed to bind request: "+err.Error())
+		helper.ResponseAPI(ctx, constant.Res400InvalidPayload)
+		return
+	}
+
+	if err := f.Validator.Struct(req); err != nil {
+		helper.LogError(apiCallID, "Payload validation failed: "+err.Error())
+		formattedErrors := helper.ErrorValidationFormatter(err.(validator.ValidationErrors))
+		helper.ResponseAPI(ctx, constant.Res400InvalidPayload, formattedErrors)
+		return
+	}
+
+	result, response := f.Service.GeneratePresignedURL(apiCallID, req.Path, req.Expires)
+	helper.ResponseAPI(ctx, response, result)
+}
+
 func (f *FileHandler) DeleteFile(ctx *gin.Context) {
 	apiCallID := ctx.GetString(constant.RequestIDKey)
 
