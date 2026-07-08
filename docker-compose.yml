@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: gcs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-root}
+      POSTGRES_DB: ${DB_NAME:-gcs}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gcs-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-gcs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Go Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gcs-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-4000}:${APP_PORT:-4000}"
+    env_file:
+      - .env
+    environment:
+      # Override DB_HOST to point to the postgres container
+      DB_HOST: postgres
+      DB_PORT: 5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      # Mount GCS service account key if using local credential file
+      # Uncomment and adjust path if GCS_CONFIG_SA=true
+      # - ./your-service-account-key.json:/app/your-service-account-key.json:ro
+    networks:
+      - gcs-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  gcs-network:
+    driver: bridge
