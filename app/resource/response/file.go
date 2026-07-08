@@ -20,6 +20,12 @@ type GetFileResponse struct {
 	UpdatedAt string `json:"updatedAt"`
 }
 
+type PresignedURLResponse struct {
+	URL       string `json:"url"`
+	Path      string `json:"path"`
+	ExpiresAt string `json:"expires_at"`
+}
+
 func GetFileResponseFormatter(listFile *[]storage.ObjectAttrs) []GetFileResponse {
 	var result []GetFileResponse
 
